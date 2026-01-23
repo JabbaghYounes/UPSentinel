@@ -1,0 +1,323 @@
+Phase 0 — Repo scaffolding and developer ergonomics (MVP foundation)
+0.1 Create repo skeleton
+
+Create directories: ups/, icons/, systemd/, scripts/
+
+Add placeholder files: indicator.py, ups/hardware.py, ups/battery.py, ups/model.py
+
+Add README.md, requirements.txt, optional pyproject.toml
+
+Acceptance criteria
+
+tree matches PRD structure
+
+python3 -m py_compile indicator.py succeeds (even if stubbed)
+
+0.2 Add basic quality tooling (lightweight)
+
+Add ruff or flake8 config (optional but recommended)
+
+Add mypy (optional)
+
+Add .editorconfig
+
+Acceptance criteria
+
+ruff check . passes (or tool installed and documented)
+
+Phase 1 — Hardware reading layer (UPS HAT B data access)
+1.1 Add I2C diagnostics helper
+
+Implement scripts/i2c-detect.sh to:
+
+check i2cdetect exists
+
+run i2cdetect -y 1
+
+print hints if 0x42 not found
+
+Acceptance criteria
+
+Script runs without error and provides useful output
+
+1.2 Implement INA219 wrapper (ups/hardware.py)
+
+Decide approach:
+
+Option A (preferred): vendor the Waveshare INA219.py into ups/vendor/INA219.py
+
+Option B: implement minimal register reads directly in hardware.py
+
+Provide read_electrical_status() returning volts/amps/watts
+
+Acceptance criteria
+
+Running a small test snippet prints plausible readings:
+
+voltage in expected range
+
+current not insane
+
+Handles I2C errors gracefully (raises a clear exception)
+
+1.3 Add address + bus configuration
+
+Defaults: bus 1, addr 0x42
+
+Allow override via env vars initially (config file later):
+
+UPS_I2C_BUS, UPS_I2C_ADDR
+
+Acceptance criteria
+
+Changing env vars changes bus/address used
+
+Phase 2 — Battery logic and unified model (no UI yet)
+2.1 Define dataclasses (ups/model.py)
+
+ElectricalStatus(voltage, current, power)
+
+UPSStatus(voltage, current, power, percent, state)
+
+Acceptance criteria
+
+Imports and type checks cleanly
+
+2.2 Battery percent estimation (ups/battery.py)
+
+Implement voltage-to-percent curve mapping
+
+Implement smoothing/clamping:
+
+0–100%
+
+avoid jitter with a small moving average (optional)
+
+Define thresholds (constants for now):
+
+warn=20%, critical=10%
+
+Acceptance criteria
+
+Unit tests (or simple script) verify mapping at several voltages
+
+Handles missing/invalid voltage (returns percent=None or 0 with state="unknown")
+
+2.3 Charging/discharging state inference
+
+Use sign of current (or delta in voltage) to infer:
+
+charging, discharging, unknown
+
+Acceptance criteria
+
+State changes appropriately when current sign flips (manual test ok)
+
+Phase 3 — Tray indicator MVP (v0.1.0)
+3.1 Choose indicator backend for Bookworm
+
+Use Ayatana AppIndicator via GI:
+
+gir1.2-ayatanaappindicator3-0.1, python3-gi
+
+Document desktop requirements in README:
+
+GNOME: gnome-shell-extension-appindicator
+
+Xfce: xfce4-indicator-plugin etc.
+
+Acceptance criteria
+
+README includes exact packages and notes for GNOME/Xfce tray support
+
+3.2 Implement indicator.py basic UI
+
+Create AppIndicator tray icon
+
+Create menu:
+
+“Open Diagnostics” (optional)
+
+“Quit”
+
+Poll every N seconds (default 5)
+
+Update tooltip with:
+
+percent, voltage, current, power, state
+
+Acceptance criteria
+
+Icon appears in a tray-capable session
+
+Tooltip updates every interval
+
+Quit menu works
+
+3.3 Icon state selection
+
+Create mapping percent → icon:
+
+full/good/medium/low/critical
+
+Use theme icons first (symbolic names) OR ship icons in icons/
+
+Acceptance criteria
+
+Icon changes when forcing percent values (add a --mock mode for testing if needed)
+
+Phase 4 — Notifications and “safe-by-default” behavior (v0.2.0)
+4.1 Add desktop notifications
+
+Use notify2 (or GI notifications) to show:
+
+warning at <=20%
+
+critical at <=10%
+
+Add hysteresis / “notify once per drop” logic
+
+Acceptance criteria
+
+Doesn’t spam notifications every poll
+
+Triggers at threshold crossings only
+
+4.2 Error-state UX
+
+If UPS not readable:
+
+icon switches to “missing”
+
+tooltip shows error summary
+
+optional notification after X failures
+
+Acceptance criteria
+
+Unplugging I2C (or wrong address) produces graceful indicator state
+
+Phase 5 — Autostart packaging (v0.2.1)
+5.1 Add systemd user service
+
+Provide systemd/ups-hat-b-indicator.service
+
+Document install steps:
+
+copy service into ~/.config/systemd/user/
+
+systemctl --user enable --now ...
+
+Acceptance criteria
+
+Starts on login
+
+Restarts on failure
+
+5.2 Add “install helper” script (optional)
+
+scripts/install-user-service.sh to:
+
+copy files
+
+enable service
+
+Acceptance criteria
+
+One-command install works on fresh Debian Bookworm user session
+
+Phase 6 — Configuration file (v0.3.0)
+6.1 Add config file support
+
+Use TOML: ~/.config/ups-hat-b/config.toml
+
+Configurable fields:
+
+i2c bus/address
+
+update interval
+
+thresholds
+
+voltage curve profile
+
+Acceptance criteria
+
+Defaults work with no config
+
+Config overrides take effect without code changes
+
+6.2 Add CLI flags overriding config (optional)
+
+--bus, --addr, --interval, --config
+
+Acceptance criteria
+
+Flags override config values
+
+Phase 7 — Optional safe shutdown (opt-in only) (v0.4.0)
+7.1 Implement opt-in shutdown action
+
+Config option: shutdown_enabled = true
+
+Threshold option: shutdown_percent = 5
+
+Execution method:
+
+Call systemctl poweroff via polkit OR require user to configure sudoers (document)
+
+Add a “Test shutdown command” dry-run flag
+
+Acceptance criteria
+
+Disabled by default
+
+When enabled and threshold reached, shutdown triggers exactly once
+
+Clear documentation of required permissions
+
+Phase 8 — Hardening, tests, and release polish (v1.0.0)
+8.1 Logging
+
+Add structured logging to stderr/journal
+
+--log-level option
+
+Acceptance criteria
+
+Useful logs appear in journalctl --user -u ...
+
+8.2 Basic automated tests
+
+Unit tests for:
+
+battery curve mapping
+
+threshold notification gating logic
+
+config parsing
+
+Hardware reading can be mocked
+
+Acceptance criteria
+
+pytest passes in CI without hardware
+
+8.3 Release artifacts and docs
+
+Improve README:
+
+troubleshooting
+
+desktop-specific tray guidance
+
+screenshots (optional)
+
+Add license
+
+Add changelog
+
+Acceptance criteria
+
+“Install → run → autostart” documented end-to-end
+
