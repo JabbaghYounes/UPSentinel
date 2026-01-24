@@ -1,0 +1,16 @@
+[Unit]
+Description=UPS HAT (B) Desktop Indicator
+After=graphical-session.target
+PartOf=graphical-session.target
+
+[Service]
+Type=simple
+# __INSTALL_DIR__ is replaced by install-user-service.sh
+ExecStart=/usr/bin/python3 __INSTALL_DIR__/indicator.py
+Restart=on-failure
+RestartSec=5
+# Ensure access to the display for tray icon
+Environment=DISPLAY=:0
+
+[Install]
+WantedBy=graphical-session.target
