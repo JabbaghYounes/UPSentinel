@@ -7,6 +7,10 @@ Desktop tray indicator for the Waveshare UPS HAT (B) on Debian GNU/Linux 12 (Boo
 - System tray icon showing battery state (full/good/low/critical)
 - Menu with voltage, current, power, and percentage
 - Charging/discharging icon variants
+- **Multiple display backends** with auto-detection:
+  - AppIndicator (GNOME, KDE, Xfce, MATE)
+  - GTK Layer Shell widget (Raspberry Pi OS Bookworm Wayland)
+  - Notification-only fallback
 - Mock mode for testing without hardware (`--mock`)
 - Configurable poll interval (`--interval`)
 
@@ -14,11 +18,17 @@ Desktop tray indicator for the Waveshare UPS HAT (B) on Debian GNU/Linux 12 (Boo
 
 ```
 ups-hat-b-indicator/
-├── indicator.py          # Entry point (tray UI)
+├── indicator.py          # Entry point
 ├── ups/
-│   ├── hardware.py       # INA219 wrapper
+│   ├── hardware.py       # INA219 I2C wrapper
 │   ├── battery.py        # Voltage → percentage
-│   └── model.py          # Shared dataclasses
+│   ├── model.py          # Shared dataclasses
+│   ├── config.py         # Configuration loading
+│   └── backends/         # Display backends
+│       ├── __init__.py   # Backend detection
+│       ├── appindicator.py  # System tray (GNOME/KDE/Xfce)
+│       ├── layershell.py    # Wayland widget (Pi OS)
+│       └── notification.py  # Fallback (notifications only)
 ├── icons/                # Battery state icons
 ├── systemd/              # User service unit
 └── scripts/              # Helper scripts
@@ -70,10 +80,27 @@ Add "Indicator Applet" to a panel.
 
 **KDE Plasma:** AppIndicator support is built-in; no extra packages needed.
 
+**Raspberry Pi OS Bookworm (Wayland - default):**
+
+The default Pi OS Bookworm desktop uses Wayland with wf-panel-pi, which does not
+support AppIndicator. The indicator will automatically use GTK Layer Shell to
+display a small floating widget in the top-right corner instead.
+
+```bash
+sudo apt install libgtk-layer-shell0 gir1.2-gtklayershell-0.1
+```
+
+The widget shows battery percentage with an icon and opens a detail menu on click.
+
+**Raspberry Pi OS Bookworm (X11 - optional):**
+
+If you switch to X11 mode via `raspi-config > Advanced Options > Wayland > X11`,
+the standard AppIndicator tray icon will work without additional packages.
+
 ## Usage
 
 ```bash
-# Run with real hardware
+# Run with real hardware (auto-detects best backend)
 python3 indicator.py
 
 # Run with mock data (for testing without UPS HAT)
@@ -81,6 +108,11 @@ python3 indicator.py --mock
 
 # Custom poll interval (seconds)
 python3 indicator.py --interval 10
+
+# Force a specific display backend
+python3 indicator.py --backend appindicator   # System tray icon
+python3 indicator.py --backend layershell     # Floating widget (Wayland)
+python3 indicator.py --backend notification   # Notifications only
 ```
 
 ## Autostart (systemd user service)
@@ -128,6 +160,7 @@ addr = "0x42"
 
 [indicator]
 interval = 5       # poll interval in seconds
+backend = "auto"   # auto, appindicator, layershell, notification
 
 [battery]
 warn_percent = 20
@@ -222,7 +255,10 @@ I2C diagnostics:
 - GNOME: Ensure `gnome-shell-extension-appindicator` is installed and enabled.
   Log out and back in after enabling.
 - Xfce: Add "Indicator Plugin" to a panel.
+- Raspberry Pi OS (Wayland): Install `gir1.2-gtklayershell-0.1` for the floating
+  widget. The default wf-panel-pi does not support AppIndicator tray icons.
 - Check the indicator is running: `systemctl --user status ups-hat-b-indicator`
+- Check which backend is being used: `python3 indicator.py --log-level INFO --mock`
 
 **"UPS: unavailable" in menu:**
 

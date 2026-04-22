@@ -39,6 +39,10 @@ _DEFAULT_CURVE: list[tuple[float, int]] = [
 ]
 
 
+# Valid backend choices
+VALID_BACKENDS = ("auto", "appindicator", "layershell", "notification")
+
+
 @dataclass
 class Config:
     """Application configuration."""
@@ -49,6 +53,7 @@ class Config:
 
     # Indicator settings
     interval: int = 5
+    backend: str = "auto"  # auto, appindicator, layershell, notification
 
     # Battery thresholds
     warn_percent: int = 20
@@ -94,6 +99,10 @@ def _apply_toml(cfg: Config, data: dict) -> None:
     indicator = data.get("indicator", {})
     if "interval" in indicator:
         cfg.interval = int(indicator["interval"])
+    if "backend" in indicator:
+        backend = str(indicator["backend"]).lower()
+        if backend in VALID_BACKENDS:
+            cfg.backend = backend
 
     battery = data.get("battery", {})
     if "warn_percent" in battery:
