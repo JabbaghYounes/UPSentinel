@@ -3,7 +3,7 @@
 Desktop tray indicator for the Waveshare UPS HAT (B) on Debian
 GNU/Linux 12 (Bookworm) aarch64.
 
-![Battery indicator in three states — discharging, charging, critical](docs/screenshots/states.png)
+![Battery indicator in three states — discharging, charging, critical](docs/screenshots/indicator-states.png)
 
 ## Quick install
 
