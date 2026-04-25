@@ -18,6 +18,13 @@ dev = [
 [project.scripts]
 ups-indicator = "indicator:main"
 
+# Pin discovered packages so setuptools doesn't get confused by the
+# top-level icons/, systemd/, resources/ directories (which are data,
+# not Python packages) and refuse to build with a "Multiple top-level
+# packages discovered in a flat-layout" error.
+[tool.setuptools.packages.find]
+include = ["ups*"]
+
 [tool.ruff]
 target-version = "py310"
 line-length = 100
