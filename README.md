@@ -40,27 +40,37 @@ ups-hat-b-indicator/
 
 ## Quick install
 
-For Raspberry Pi OS Bookworm (and most desktop Linux), one command:
+On a fresh Raspberry Pi OS Bookworm (or most desktop Linux), one line:
 
 ```bash
-./install.sh
+git clone https://github.com/JabbaghYounes/UPSentinel.git ~/UPSentinel && cd ~/UPSentinel && ./install.sh
 ```
 
-This installs system packages (with a follow-up `dpkg` verify because GIR
-packages have been observed to silently fail to register on Pi OS), runs an
-I2C smoke check, installs the Python package, writes a `config.toml` that
-locks the backend to `appindicator` so two Pis side-by-side render
-identically, and registers an autostart entry. On Pi OS / wlroots
-compositors it uses an XDG `.desktop` file in `~/.config/autostart/`; on
-other desktops it falls back to a `systemd --user` service. Override with
-`--mode xdg|systemd` if you know which one you want.
+If you've already cloned the repo, just run `./install.sh` from inside it.
 
-After install, log into the desktop session (or reboot if auto-login is
-enabled — `sudo raspi-config nonint get_autologin` returns `0` when on)
-and the indicator appears in the panel tray.
+The installer:
 
-The remainder of this README documents the same steps manually for users
-who want finer control or are running on an unusual setup.
+- runs `apt install` for the GTK / GIR / I2C packages, then `dpkg -l`
+  verifies they actually registered (silent failures observed on Pi OS);
+- enables the I2C interface via `raspi-config` if it's off;
+- adds your user to the `i2c` group if you're not already in it;
+- runs `pip install -e .` (with a `--break-system-packages` fallback for
+  PEP 668 distributions);
+- writes `~/.config/ups-hat-b/config.toml` locking the backend to
+  `appindicator` so multiple Pis render identically;
+- registers an autostart entry — XDG `.desktop` for Pi OS / wlroots,
+  `systemd --user` elsewhere (override with `--mode xdg|systemd`);
+- starts the indicator immediately if you ran the script from inside a
+  desktop session, otherwise tells you whether a reboot or just a
+  re-login is needed.
+
+When a reboot is required (I2C was just enabled, or you were just added
+to the i2c group), the script says so explicitly at the end. Otherwise
+the tray icon appears within a second or two and on every subsequent
+desktop login automatically.
+
+The rest of this README documents the same steps manually for users who
+want finer control or are running on an unusual setup.
 
 ## Requirements
 
