@@ -3,18 +3,7 @@
 Desktop tray indicator for the Waveshare UPS HAT (B) on Debian
 GNU/Linux 12 (Bookworm) aarch64.
 
-## Features
-
-- Tray icon showing battery state and charge level, with a menu for
-  voltage / current / power / percentage.
-- Three display backends with auto-detection: **AppIndicator**
-  (GNOME, KDE, Xfce, MATE), **GTK Layer Shell** widget (Pi OS
-  Bookworm Wayland), and a **notification-only** fallback.
-- Bundled SVG icons (white outline, Pi-OS-blue fill, red on
-  critical) — render identically across icon themes and Pis.
-- Mock mode (`--mock`) for testing without the HAT.
-- Opt-in safe shutdown when battery drops below a configurable
-  threshold.
+![Battery indicator in three states — discharging, charging, critical](docs/screenshots/states.png)
 
 ## Quick install
 
@@ -31,6 +20,19 @@ group, registers an autostart entry, and starts the indicator
 immediately if you ran it from a desktop session. See
 [docs/installation.md](docs/installation.md) for the full manual
 equivalents.
+
+## Features
+
+- Tray icon showing battery state and charge level, with a menu for
+  voltage / current / power / percentage.
+- Three display backends with auto-detection: **AppIndicator**
+  (GNOME, KDE, Xfce, MATE), **GTK Layer Shell** widget (Pi OS
+  Bookworm Wayland), and a **notification-only** fallback.
+- Bundled SVG icons (white outline, Pi-OS-blue fill, red on
+  critical) — render identically across icon themes and Pis.
+- Mock mode (`--mock`) for testing without the HAT.
+- Opt-in safe shutdown when battery drops below a configurable
+  threshold.
 
 ## Documentation
 
