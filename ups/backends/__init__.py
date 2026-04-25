@@ -13,6 +13,7 @@ import os
 import random
 import subprocess
 from abc import ABC, abstractmethod
+from pathlib import Path
 
 import gi
 
@@ -31,24 +32,40 @@ log = logging.getLogger("ups-indicator")
 # Number of consecutive read failures before notifying
 ERROR_NOTIFY_THRESHOLD = 3
 
-# Icon name mapping: (min_percent, max_percent) -> icon_name
+# Bundled icons live at <repo>/icons/. Resolves to that directory whether
+# the package is run in-tree or installed in editable mode.
+ICONS_DIR = Path(__file__).resolve().parents[2] / "icons"
+
+
+def _icon(name: str) -> str:
+    """Resolve a bundled icon filename to its absolute path."""
+    return str(ICONS_DIR / f"{name}.svg")
+
+
+# Icon mapping: (min_percent, max_percent) -> (discharging_path, charging_path)
 ICON_MAP: list[tuple[int, int, str, str]] = [
-    # (min%, max%, discharging_icon, charging_icon)
-    (0, 10, "battery-caution-symbolic", "battery-caution-charging-symbolic"),
-    (11, 20, "battery-low-symbolic", "battery-low-charging-symbolic"),
-    (21, 50, "battery-low-symbolic", "battery-good-charging-symbolic"),
-    (51, 80, "battery-good-symbolic", "battery-good-charging-symbolic"),
-    (81, 100, "battery-full-symbolic", "battery-full-charging-symbolic"),
+    (0, 10, _icon("battery-caution"), _icon("battery-caution-charging")),
+    (11, 20, _icon("battery-low"), _icon("battery-low-charging")),
+    (21, 50, _icon("battery-low"), _icon("battery-good-charging")),
+    (51, 80, _icon("battery-good"), _icon("battery-good-charging")),
+    (81, 100, _icon("battery-full"), _icon("battery-full-charging")),
 ]
 
-ICON_MISSING = "battery-missing-symbolic"
-ICON_DEFAULT = "battery-good-symbolic"
+ICON_MISSING = _icon("battery-missing")
+ICON_DEFAULT = _icon("battery-good")
+ICON_CAUTION = _icon("battery-caution")
+ICON_LOW = _icon("battery-low")
 
 APP_NAME = "UPS HAT (B)"
 
 
 def get_icon_name(status: UPSStatus | None) -> str:
-    """Select an icon name based on UPS status."""
+    """Select an absolute icon path based on UPS status.
+
+    The return type is a path string (kept named ``get_icon_name`` for
+    historical reasons) — bundled SVGs replaced freedesktop theme names so
+    the indicator looks identical regardless of GTK icon theme.
+    """
     if status is None or status.percent is None:
         return ICON_MISSING
 
@@ -215,7 +232,7 @@ class StatusBackend(ABC):
                 self.notify(
                     "Battery Critical",
                     f"UPS battery at {percent}% - shutdown imminent!",
-                    "battery-caution-symbolic",
+                    ICON_CAUTION,
                     urgency=Notify.Urgency.CRITICAL,
                 )
         elif percent > self.cfg.critical_percent + 2:
@@ -229,7 +246,7 @@ class StatusBackend(ABC):
                 self.notify(
                     "Battery Low",
                     f"UPS battery at {percent}%.",
-                    "battery-low-symbolic",
+                    ICON_LOW,
                     urgency=Notify.Urgency.NORMAL,
                 )
         elif percent > self.cfg.warn_percent + 2:

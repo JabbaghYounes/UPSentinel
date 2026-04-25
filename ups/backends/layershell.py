@@ -202,9 +202,9 @@ class LayerShellBackend(StatusBackend):
             self._menu_power.set_label("Power: ---")
             return
 
-        # Update icon
-        icon_name = get_icon_name(status)
-        self._icon.set_from_icon_name(icon_name, Gtk.IconSize.MENU)
+        # Update icon (bundled SVG, absolute path)
+        icon_path = get_icon_name(status)
+        self._icon.set_from_file(icon_path)
 
         # Update percentage label
         pct = f"{status.percent}%" if status.percent is not None else "?%"

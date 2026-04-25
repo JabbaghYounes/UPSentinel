@@ -11,6 +11,10 @@ Desktop tray indicator for the Waveshare UPS HAT (B) on Debian GNU/Linux 12 (Boo
   - AppIndicator (GNOME, KDE, Xfce, MATE)
   - GTK Layer Shell widget (Raspberry Pi OS Bookworm Wayland)
   - Notification-only fallback
+- **Bundled SVG icons** in `icons/` — white outline, blue fill matching
+  Pi OS panel glyphs, red on critical state. The indicator no longer
+  depends on the freedesktop icon theme, so two Pis with different theme
+  configurations render identically.
 - Mock mode for testing without hardware (`--mock`)
 - Configurable poll interval (`--interval`)
 
@@ -34,6 +38,30 @@ ups-hat-b-indicator/
 └── scripts/              # Helper scripts
 ```
 
+## Quick install
+
+For Raspberry Pi OS Bookworm (and most desktop Linux), one command:
+
+```bash
+./install.sh
+```
+
+This installs system packages (with a follow-up `dpkg` verify because GIR
+packages have been observed to silently fail to register on Pi OS), runs an
+I2C smoke check, installs the Python package, writes a `config.toml` that
+locks the backend to `appindicator` so two Pis side-by-side render
+identically, and registers an autostart entry. On Pi OS / wlroots
+compositors it uses an XDG `.desktop` file in `~/.config/autostart/`; on
+other desktops it falls back to a `systemd --user` service. Override with
+`--mode xdg|systemd` if you know which one you want.
+
+After install, log into the desktop session (or reboot if auto-login is
+enabled — `sudo raspi-config nonint get_autologin` returns `0` when on)
+and the indicator appears in the panel tray.
+
+The remainder of this README documents the same steps manually for users
+who want finer control or are running on an unusual setup.
+
 ## Requirements
 
 - Python 3.11+
@@ -43,7 +71,13 @@ ups-hat-b-indicator/
 ### System packages
 
 ```bash
-sudo apt install python3-gi gir1.2-ayatanaappindicator3-0.1 python3-smbus2 i2c-tools
+sudo apt install python3-gi gir1.2-ayatanaappindicator3-0.1 \
+    libgtk-layer-shell0 gir1.2-gtklayershell-0.1 \
+    python3-smbus2 i2c-tools libnotify-bin
+
+# Verify the GIR packages actually registered (silent failures observed
+# on Pi OS Bookworm — re-run the install if either is missing):
+dpkg -l gir1.2-ayatanaappindicator3-0.1 gir1.2-gtklayershell-0.1 | grep ^ii
 ```
 
 ### Desktop-specific tray support
@@ -115,15 +149,24 @@ python3 indicator.py --backend layershell     # Floating widget (Wayland)
 python3 indicator.py --backend notification   # Notifications only
 ```
 
-## Autostart (systemd user service)
+## Autostart
 
-One-command install:
+Prefer `./install.sh` (described above) — it picks the right autostart
+mechanism for your system. Two backends are supported:
 
-```bash
-./scripts/install-user-service.sh
-```
+- **XDG autostart** (`~/.config/autostart/ups-hat-b-indicator.desktop`) —
+  used by default on Pi OS Bookworm and other wlroots compositors. The
+  desktop session manager launches the entry directly, so the indicator
+  inherits a working Wayland/DBus environment. Required on Pi OS under
+  `wayvnc`, where `graphical-session.target` does not fire reliably and
+  `systemctl --user` services therefore never trigger.
+- **systemd `--user` service** — preferred on most desktop Linux where
+  `graphical-session.target` is reached on login. Install standalone
+  with `./scripts/install-user-service.sh` (or `./install.sh --mode systemd`).
 
-This copies the service file to `~/.config/systemd/user/`, enables it, and starts it immediately. The indicator will auto-start on login and restart on failure.
+`./scripts/install-user-service.sh` copies the service file to
+`~/.config/systemd/user/`, enables it, and starts it. The indicator
+auto-starts on graphical login and restarts on failure.
 
 Manual install:
 
@@ -282,6 +325,21 @@ I2C diagnostics:
 - Check logs: `journalctl --user -u ups-hat-b-indicator -n 50`
 - Verify the service file path is correct: `systemctl --user cat ups-hat-b-indicator`
 - Ensure `graphical-session.target` is reached: `systemctl --user is-active graphical-session.target`
+
+**Pi OS Bookworm + wayvnc — service installs but never runs:**
+
+Under `wayvnc` on Pi OS, the wayfire/labwc session does not signal
+`graphical-session.target` to the user systemd manager, so a unit with
+`WantedBy=graphical-session.target` is enabled but never triggered. Use
+the XDG autostart path instead:
+
+```bash
+./install.sh --mode xdg
+```
+
+The desktop session reads `~/.config/autostart/*.desktop` directly when
+the GUI starts, so the indicator launches with a working Wayland/DBus
+environment regardless of whether `graphical-session.target` fires.
 
 **Shutdown not working when enabled:**
 
