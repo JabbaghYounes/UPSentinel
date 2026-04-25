@@ -115,17 +115,45 @@ else
     yellow "Skipping apt (--skip-apt)."
 fi
 
-# ---------- step 2: I2C smoke check ----------
+# ---------- step 2: enable I2C + put user in i2c group ----------
+NEEDS_REBOOT=0
+
+header "Enabling I2C interface"
+if command -v raspi-config >/dev/null 2>&1; then
+    # raspi-config nonint get_i2c: 0 = enabled, 1 = disabled
+    if [[ "$(sudo raspi-config nonint get_i2c 2>/dev/null)" == "1" ]]; then
+        sudo raspi-config nonint do_i2c 0
+        green "I2C interface enabled (reboot required to take effect)."
+        NEEDS_REBOOT=1
+    else
+        green "I2C already enabled."
+    fi
+else
+    yellow "raspi-config not available — assuming I2C is already enabled."
+fi
+
+header "Ensuring user is in i2c group"
+if id -nG "$USER" | tr ' ' '\n' | grep -qx 'i2c'; then
+    green "$USER is already in the i2c group."
+else
+    if getent group i2c >/dev/null 2>&1; then
+        sudo usermod -aG i2c "$USER"
+        yellow "Added $USER to i2c group (re-login or reboot for membership to apply)."
+        NEEDS_REBOOT=1
+    else
+        yellow "i2c group does not exist on this system — skipping."
+    fi
+fi
+
 header "Checking UPS HAT on I2C bus 1"
 if command -v i2cdetect >/dev/null 2>&1; then
-    if i2cdetect -y 1 2>/dev/null | grep -qE "(^4[0-9]:|\b42\b)"; then
-        if i2cdetect -y 1 2>/dev/null | awk 'NR>1 {for(i=2;i<=NF;i++) if($i=="42") exit 0; } END {exit 1}'; then
-            green "UPS HAT detected at 0x42."
-        else
-            yellow "I2C bus 1 readable but 0x42 not present — confirm the HAT is seated."
-        fi
+    # sudo so the check works even before group membership applies in this shell
+    if sudo i2cdetect -y 1 2>/dev/null | awk 'NR>1 {for(i=2;i<=NF;i++) if($i=="42") exit 0;} END {exit 1}'; then
+        green "UPS HAT detected at 0x42."
+    elif sudo i2cdetect -y 1 >/dev/null 2>&1; then
+        yellow "I2C bus 1 readable but 0x42 not present — confirm the HAT is seated."
     else
-        yellow "Could not read I2C bus 1 (need i2c group membership? sudo usermod -aG i2c \$USER)"
+        yellow "Could not read I2C bus 1 — likely needs reboot after enabling I2C."
     fi
 else
     yellow "i2cdetect not available; skipping HAT presence check."
@@ -226,19 +254,65 @@ if command -v raspi-config >/dev/null 2>&1; then
     fi
 fi
 
+# ---------- step 7: start in current session if possible ----------
+STARTED_NOW=0
+header "Starting indicator"
+if [[ $NEEDS_REBOOT -eq 1 ]]; then
+    yellow "Skipping immediate start — system needs reboot first"
+    yellow "(I2C interface enabled and/or i2c group membership added)."
+elif [[ "${XDG_SESSION_TYPE:-tty}" != "wayland" && "${XDG_SESSION_TYPE:-tty}" != "x11" ]]; then
+    yellow "Not in a desktop session ($XDG_SESSION_TYPE) — indicator will start"
+    yellow "automatically on next desktop login."
+else
+    # Kill any old instance before starting a fresh one
+    pkill -f "${PROJECT_DIR}/indicator.py" 2>/dev/null || true
+    nohup /usr/bin/python3 "${PROJECT_DIR}/indicator.py" \
+        >/tmp/ups-hat-b-indicator.log 2>&1 &
+    disown
+    sleep 1
+    if pgrep -f "${PROJECT_DIR}/indicator.py" >/dev/null; then
+        green "Indicator started in this session (logs: /tmp/ups-hat-b-indicator.log)"
+        STARTED_NOW=1
+    else
+        yellow "Tried to start in this session but no process is running —"
+        yellow "check /tmp/ups-hat-b-indicator.log for errors."
+    fi
+fi
+
 # ---------- summary ----------
 header "Install complete"
 cat <<EOF
 Backend:       appindicator (locked in $CONFIG_FILE)
 Autostart:     $MODE
 Project:       $PROJECT_DIR
-
-Verify after the next desktop login:
-  pgrep -af indicator.py
-
-Run manually right now (current session must be a desktop session):
-  python3 $PROJECT_DIR/indicator.py --log-level INFO
-
-Logs (systemd mode):
-  journalctl --user -u ups-hat-b-indicator -f
 EOF
+
+if [[ $NEEDS_REBOOT -eq 1 ]]; then
+    yellow ""
+    yellow "REBOOT REQUIRED before the indicator can read the UPS HAT:"
+    yellow "    sudo reboot"
+    yellow ""
+    yellow "After reboot the indicator will appear in the panel tray automatically"
+    yellow "(assuming desktop auto-login is on, which is the Pi OS default)."
+elif [[ $STARTED_NOW -eq 1 ]]; then
+    green ""
+    green "The indicator is running now and will auto-start on next login."
+    green "Verify:  pgrep -af indicator.py"
+else
+    cat <<EOF
+
+Indicator will start automatically on next desktop login.
+Verify after login:  pgrep -af indicator.py
+
+To run manually right now (must be from a desktop session, not SSH):
+    python3 $PROJECT_DIR/indicator.py --log-level INFO
+EOF
+fi
+
+if [[ "$MODE" == "systemd" ]]; then
+    cat <<EOF
+
+Service logs (systemd mode):
+    journalctl --user -u ups-hat-b-indicator -f
+EOF
+fi
