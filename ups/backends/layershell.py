@@ -1,7 +1,9 @@
 """GTK Layer Shell backend for Wayland compositors.
 
 Works on wlroots-based compositors like Wayfire (Pi OS Bookworm default),
-Sway, and Hyprland. Creates a small floating widget in the corner.
+Sway, and Hyprland. Renders a small panel-style widget; defaults sit
+inside the wf-panel-pi strip at the top-right, just left of the clock.
+Anchor edges and margins are configurable in `[layershell]`.
 """
 
 from __future__ import annotations
@@ -27,35 +29,35 @@ from ups.model import BatteryState, UPSStatus  # noqa: E402
 
 log = logging.getLogger("ups-indicator")
 
-# Widget styling
+# Widget styling. Transparent background so the widget blends into
+# whichever panel/desktop colour scheme it sits over (Pi OS panel,
+# dark Wayfire bar, etc.). Hover gets a subtle highlight so the
+# click target is still discoverable.
 _CSS = b"""
 .ups-widget {
-    background-color: rgba(40, 40, 40, 0.9);
-    border-radius: 8px;
-    padding: 4px 8px;
-    color: #ffffff;
+    background-color: transparent;
+    padding: 0 4px;
+    color: inherit;
     font-size: 12px;
 }
 .ups-widget:hover {
-    background-color: rgba(60, 60, 60, 0.95);
+    background-color: rgba(128, 128, 128, 0.18);
+    border-radius: 4px;
 }
 .ups-percent {
     font-weight: bold;
-    font-size: 13px;
 }
 .ups-charging {
-    color: #73d216;
+    color: #1aa260;
 }
 .ups-discharging {
-    color: #f57900;
+    color: inherit;
 }
 .ups-critical {
-    color: #ef2929;
+    color: #e53935;
 }
 .ups-menu {
-    background-color: rgba(50, 50, 50, 0.95);
-    border-radius: 6px;
-    padding: 8px;
+    padding: 4px;
 }
 """
 
@@ -96,17 +98,24 @@ class LayerShellBackend(StatusBackend):
         """Create the floating status widget."""
         self._window = Gtk.Window()
 
-        # Initialize Layer Shell
         GtkLayerShell.init_for_window(self._window)
-        GtkLayerShell.set_layer(self._window, GtkLayerShell.Layer.TOP)
+        # OVERLAY layer so the widget renders above wf-panel-pi instead
+        # of behind it — TOP can sit underneath some panel builds.
+        GtkLayerShell.set_layer(self._window, GtkLayerShell.Layer.OVERLAY)
 
-        # Anchor to top-right corner
-        GtkLayerShell.set_anchor(self._window, GtkLayerShell.Edge.TOP, True)
-        GtkLayerShell.set_anchor(self._window, GtkLayerShell.Edge.RIGHT, True)
-
-        # Margins from edges
-        GtkLayerShell.set_margin(self._window, GtkLayerShell.Edge.TOP, 8)
-        GtkLayerShell.set_margin(self._window, GtkLayerShell.Edge.RIGHT, 8)
+        edges = (
+            (GtkLayerShell.Edge.TOP, self.cfg.layershell_anchor_top,
+             self.cfg.layershell_margin_top),
+            (GtkLayerShell.Edge.BOTTOM, self.cfg.layershell_anchor_bottom,
+             self.cfg.layershell_margin_bottom),
+            (GtkLayerShell.Edge.LEFT, self.cfg.layershell_anchor_left,
+             self.cfg.layershell_margin_left),
+            (GtkLayerShell.Edge.RIGHT, self.cfg.layershell_anchor_right,
+             self.cfg.layershell_margin_right),
+        )
+        for edge, anchor, margin in edges:
+            GtkLayerShell.set_anchor(self._window, edge, anchor)
+            GtkLayerShell.set_margin(self._window, edge, margin)
 
         # Create content box
         event_box = Gtk.EventBox()

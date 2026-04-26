@@ -42,6 +42,17 @@ class TestDefaults:
         assert cfg.voltage_curve[0] == (6.0, 0)
         assert cfg.voltage_curve[-1] == (8.4, 100)
 
+    def test_default_layershell_placement(self) -> None:
+        cfg = Config()
+        assert cfg.layershell_anchor_top is True
+        assert cfg.layershell_anchor_right is True
+        assert cfg.layershell_anchor_bottom is False
+        assert cfg.layershell_anchor_left is False
+        assert cfg.layershell_margin_top == 2
+        assert cfg.layershell_margin_right == 110
+        assert cfg.layershell_margin_bottom == 0
+        assert cfg.layershell_margin_left == 0
+
 
 class TestLoadFromFile:
     """Tests for loading config from TOML files."""
@@ -100,6 +111,44 @@ interval = 15
             assert cfg.i2c_addr == 0x42  # default
             assert cfg.warn_percent == 20  # default
             assert len(cfg.voltage_curve) == 10  # default
+        finally:
+            os.unlink(path)
+
+    def test_layershell_overrides(self) -> None:
+        path = self._write_toml("""
+[layershell]
+anchor_top = false
+anchor_bottom = true
+anchor_right = false
+anchor_left = true
+margin_top = 0
+margin_bottom = 4
+margin_left = 12
+margin_right = 0
+""")
+        try:
+            cfg = load_config(path)
+            assert cfg.layershell_anchor_top is False
+            assert cfg.layershell_anchor_bottom is True
+            assert cfg.layershell_anchor_right is False
+            assert cfg.layershell_anchor_left is True
+            assert cfg.layershell_margin_top == 0
+            assert cfg.layershell_margin_bottom == 4
+            assert cfg.layershell_margin_left == 12
+            assert cfg.layershell_margin_right == 0
+        finally:
+            os.unlink(path)
+
+    def test_layershell_partial_keeps_defaults(self) -> None:
+        path = self._write_toml("""
+[layershell]
+margin_right = 250
+""")
+        try:
+            cfg = load_config(path)
+            assert cfg.layershell_margin_right == 250
+            assert cfg.layershell_margin_top == 2  # default
+            assert cfg.layershell_anchor_top is True  # default
         finally:
             os.unlink(path)
 

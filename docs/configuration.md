@@ -34,6 +34,19 @@ curve = [
 [shutdown]
 enabled = false     # opt-in: set true to enable auto-shutdown
 percent = 5         # shutdown when battery drops to this level
+
+# Only used when backend = "layershell". Pixel-positioned floating
+# widget — defaults are tuned for Pi OS Bookworm wf-panel-pi (sits in
+# the panel strip at top-right, just left of the clock).
+[layershell]
+anchor_top = true
+anchor_right = true
+anchor_bottom = false
+anchor_left = false
+margin_top = 2
+margin_right = 110
+margin_bottom = 0
+margin_left = 0
 ```
 
 ## Priority
@@ -57,6 +70,28 @@ if your pack differs.
 deployments render identically and a missing GIR doesn't silently fall
 back to LayerShell or notification-only. Set `backend = "auto"` to
 restore detection-based selection.
+
+On Pi OS Bookworm under wayfire/labwc, `wf-panel-pi`'s `tray` widget
+is an XEmbed tray, not a StatusNotifierItem host — it can't display
+AppIndicator items. Switch to LayerShell:
+
+```toml
+[indicator]
+backend = "layershell"
+```
+
+## LayerShell placement
+
+The LayerShell widget is anchored to screen edges via
+`anchor_top|bottom|left|right` (booleans) and offset with
+`margin_*` (pixels). Defaults place the widget inside the Pi OS
+panel strip at top-right, just left of the clock. Common tweaks:
+
+- **Move further from the clock**: increase `margin_right`.
+- **Drop below the panel**: set `margin_top = 32` (panel is ~28 px).
+- **Bottom-left corner**: `anchor_top = false`, `anchor_bottom = true`,
+  `anchor_right = false`, `anchor_left = true`, then set the
+  corresponding margins.
 
 ## Related docs
 

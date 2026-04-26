@@ -66,6 +66,18 @@ class Config:
     shutdown_enabled: bool = False
     shutdown_percent: int = 5
 
+    # LayerShell widget placement (Wayland floating widget). Defaults
+    # tuned for Pi OS Bookworm wf-panel-pi: sit inside the panel strip
+    # at top-right, offset enough to clear the clock widget.
+    layershell_anchor_top: bool = True
+    layershell_anchor_bottom: bool = False
+    layershell_anchor_left: bool = False
+    layershell_anchor_right: bool = True
+    layershell_margin_top: int = 2
+    layershell_margin_right: int = 110
+    layershell_margin_bottom: int = 0
+    layershell_margin_left: int = 0
+
 
 def load_config(config_path: Path | None = None) -> Config:
     """Load configuration from TOML file.
@@ -118,6 +130,15 @@ def _apply_toml(cfg: Config, data: dict) -> None:
         cfg.shutdown_enabled = bool(shutdown["enabled"])
     if "percent" in shutdown:
         cfg.shutdown_percent = int(shutdown["percent"])
+
+    layershell = data.get("layershell", {})
+    for edge in ("top", "bottom", "left", "right"):
+        anchor_key = f"anchor_{edge}"
+        if anchor_key in layershell:
+            setattr(cfg, f"layershell_{anchor_key}", bool(layershell[anchor_key]))
+        margin_key = f"margin_{edge}"
+        if margin_key in layershell:
+            setattr(cfg, f"layershell_{margin_key}", int(layershell[margin_key]))
 
 
 def _apply_env(cfg: Config) -> None:
