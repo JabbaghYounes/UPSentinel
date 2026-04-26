@@ -1,9 +1,9 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
   <rect x="4.5" y="2.5" width="15" height="21" rx="1.5" ry="1.5"
-        fill="none" stroke="#ffffff" stroke-width="1.5"/>
+        fill="none" stroke="#c8c8c8" stroke-width="1.5"/>
   <rect x="8.5" y="0.5" width="7" height="2" rx="0.5" ry="0.5"
-        fill="#ffffff" stroke="none"/>
-  <!-- Charge fill: blue, ~30% (low bucket 11-50%) -->
-  <rect x="5.75" y="16.7" width="12.5" height="5.55" rx="0.5" ry="0.5"
+        fill="#c8c8c8" stroke="none"/>
+  <!-- Charge fill: blue, ~95% (full bucket 81-100%) -->
+  <rect x="5.75" y="4.675" width="12.5" height="17.575" rx="0.5" ry="0.5"
         fill="#0F71CB" stroke="none"/>
 </svg>

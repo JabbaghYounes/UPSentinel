@@ -1,11 +1,11 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
   <rect x="4.5" y="2.5" width="15" height="21" rx="1.5" ry="1.5"
-        fill="none" stroke="#ffffff" stroke-width="1.5"/>
+        fill="none" stroke="#c8c8c8" stroke-width="1.5"/>
   <rect x="8.5" y="0.5" width="7" height="2" rx="0.5" ry="0.5"
-        fill="#ffffff" stroke="none"/>
+        fill="#c8c8c8" stroke="none"/>
   <!-- Charge fill: blue, ~15% (low-charging bucket 11-20%) -->
   <rect x="5.75" y="19.475" width="12.5" height="2.775" rx="0.5" ry="0.5"
         fill="#0F71CB" stroke="none"/>
   <path d="M 13.5 5 L 9 13 L 11.5 13 L 10.5 19.5 L 15 11.5 L 12.5 11.5 Z"
-        fill="#ffffff" stroke="none"/>
+        fill="#c8c8c8" stroke="none"/>
 </svg>

@@ -191,7 +191,17 @@ EOF
     green "Wrote $CONFIG_FILE"
 fi
 
-# ---------- step 5: autostart mechanism ----------
+# ---------- step 5: bundled icons into hicolor ----------
+# AppIndicatorBackend self-installs these on first launch, but seeding them
+# now means the panel sees our SVGs on its very first scan after install.
+header "Installing bundled icons into hicolor"
+if python3 -c "from ups.icon_install import ensure_user_icons_installed; from pathlib import Path; n = ensure_user_icons_installed(Path('${PROJECT_DIR}/icons')); print(f'  installed/updated {n} icon(s)')"; then
+    green "Icons synced to ~/.local/share/icons/hicolor/scalable/status/"
+else
+    yellow "Icon pre-install skipped (will self-install on first indicator launch)."
+fi
+
+# ---------- step 6: autostart mechanism ----------
 detect_mode() {
     # Pi OS / wlroots heuristic: wayfire/labwc binary present, OR /etc/os-release
     # identifies Raspberry Pi OS / Raspbian. Under wayvnc on these compositors,
@@ -242,7 +252,7 @@ EOF
         ;;
 esac
 
-# ---------- step 6: auto-login note ----------
+# ---------- step 7: auto-login note ----------
 if command -v raspi-config >/dev/null 2>&1; then
     set +e
     autologin_state="$(sudo raspi-config nonint get_autologin 2>/dev/null)"
@@ -254,7 +264,7 @@ if command -v raspi-config >/dev/null 2>&1; then
     fi
 fi
 
-# ---------- step 7: start in current session if possible ----------
+# ---------- step 8: start in current session if possible ----------
 STARTED_NOW=0
 header "Starting indicator"
 if [[ $NEEDS_REBOOT -eq 1 ]]; then

@@ -22,15 +22,15 @@ from ups.backends import (
 from ups.model import BatteryState, UPSStatus
 
 EXPECTED_ICON_FILES = [
-    "battery-caution.svg",
-    "battery-caution-charging.svg",
-    "battery-low.svg",
-    "battery-low-charging.svg",
-    "battery-good.svg",
-    "battery-good-charging.svg",
-    "battery-full.svg",
-    "battery-full-charging.svg",
-    "battery-missing.svg",
+    "ups-hat-b-battery-caution.svg",
+    "ups-hat-b-battery-caution-charging.svg",
+    "ups-hat-b-battery-low.svg",
+    "ups-hat-b-battery-low-charging.svg",
+    "ups-hat-b-battery-good.svg",
+    "ups-hat-b-battery-good-charging.svg",
+    "ups-hat-b-battery-full.svg",
+    "ups-hat-b-battery-full-charging.svg",
+    "ups-hat-b-battery-missing.svg",
 ]
 
 

@@ -8,5 +8,5 @@
         fill="#e53935" stroke="none"/>
   <!-- Lightning bolt overlay: white -->
   <path d="M 13.5 5 L 9 13 L 11.5 13 L 10.5 19.5 L 15 11.5 L 12.5 11.5 Z"
-        fill="#ffffff" stroke="none"/>
+        fill="#c8c8c8" stroke="none"/>
 </svg>

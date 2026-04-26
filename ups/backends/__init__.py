@@ -42,19 +42,21 @@ def _icon(name: str) -> str:
     return str(ICONS_DIR / f"{name}.svg")
 
 
-# Icon mapping: (min_percent, max_percent) -> (discharging_path, charging_path)
+# Icon mapping: (min_percent, max_percent) -> (discharging_path, charging_path).
+# Names carry a ups-hat-b- prefix so SNI hosts that resolve IconName via the
+# system GTK icon theme don't shadow our artwork with system battery icons.
 ICON_MAP: list[tuple[int, int, str, str]] = [
-    (0, 10, _icon("battery-caution"), _icon("battery-caution-charging")),
-    (11, 20, _icon("battery-low"), _icon("battery-low-charging")),
-    (21, 50, _icon("battery-low"), _icon("battery-good-charging")),
-    (51, 80, _icon("battery-good"), _icon("battery-good-charging")),
-    (81, 100, _icon("battery-full"), _icon("battery-full-charging")),
+    (0, 10, _icon("ups-hat-b-battery-caution"), _icon("ups-hat-b-battery-caution-charging")),
+    (11, 20, _icon("ups-hat-b-battery-low"), _icon("ups-hat-b-battery-low-charging")),
+    (21, 50, _icon("ups-hat-b-battery-low"), _icon("ups-hat-b-battery-good-charging")),
+    (51, 80, _icon("ups-hat-b-battery-good"), _icon("ups-hat-b-battery-good-charging")),
+    (81, 100, _icon("ups-hat-b-battery-full"), _icon("ups-hat-b-battery-full-charging")),
 ]
 
-ICON_MISSING = _icon("battery-missing")
-ICON_DEFAULT = _icon("battery-good")
-ICON_CAUTION = _icon("battery-caution")
-ICON_LOW = _icon("battery-low")
+ICON_MISSING = _icon("ups-hat-b-battery-missing")
+ICON_DEFAULT = _icon("ups-hat-b-battery-good")
+ICON_CAUTION = _icon("ups-hat-b-battery-caution")
+ICON_LOW = _icon("ups-hat-b-battery-low")
 
 APP_NAME = "UPS HAT (B)"
 
